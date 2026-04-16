@@ -101,12 +101,13 @@ VELANTRIM CORE 2.1 — CRYSTAL
 
 Структура:
 
-Поле| Значение
-key| идентификатор
-summary| суть
-type| fact / rule / insight
-tags| связи
-access_count| полезность
+| Поле | Значение |
+|------|---------|
+| key | идентификатор |
+| summary | суть |
+| type | fact / rule / insight |
+| tags | связи |
+| access_count | полезность |
 
 ---
 
