@@ -1,4 +1,8 @@
 # 🔱 VELANTRIM CORE 2.1 — CRYSTAL 💠
+### Exocortex Architecture System
+> Velantrim is a cognitive exocortex system where:
+> Graph = truth, LLM = interface, memory = structured cognition.
+
 
 ## 🧠 Суть в одной фразе
 
