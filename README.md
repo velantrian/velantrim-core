@@ -9,6 +9,7 @@
 
 ## 🧩 Структура ядра
 
+```bash
 VELANTRIM CORE 2.1 — CRYSTAL
 ├── 👤 Self
 ├── 💎 Ring Zero
@@ -23,7 +24,7 @@ VELANTRIM CORE 2.1 — CRYSTAL
 ├── ⛔ StopRule
 ├── 🔁 Recovery
 └── 💠 Crystal      (внешний граф)
-
+```
 ---
 
 ## 👤 Self
