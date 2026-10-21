@@ -1,4 +1,15 @@
 # 🔱 VELANTRIM CORE 2.1 — CRYSTAL 💠
+
+## 🧭 About this archive
+
+> 🔱 **An early Velantrim exocortex architecture sketch, not the current evidence or truth authority.**
+>
+> **Why it exists:** It records an earlier proposal for values, memory, goals and a Crystal-oriented core. Read it as architecture history; current Crystal behavior must be verified in its own repository.
+>
+> **Example:** A graph edge may suggest a connection but should not independently establish a validated fact.
+>
+> **Scope:** Architectural source material; the historical slogan `Graph = truth` below is not a current ecosystem rule.
+
 ### Exocortex Architecture System
 > Velantrim is a cognitive exocortex system where:
 > Graph = truth, LLM = interface, memory = structured cognition.
