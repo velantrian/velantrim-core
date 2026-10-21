@@ -1,14 +1,12 @@
 # 🔱 VELANTRIM CORE 2.1 — CRYSTAL 💠
 
-## 🧭 About this archive
-
-> 🔱 **An early Velantrim exocortex architecture sketch, not the current evidence or truth authority.**
+> 🔱 **Velantrim Core 2.1 Crystal — архитектура экзокортекса с Python-модулями и исследовательской документацией.**
 >
-> **Why it exists:** It records an earlier proposal for values, memory, goals and a Crystal-oriented core. Read it as architecture history; current Crystal behavior must be verified in its own repository.
+> **Зачем:** здесь описаны принципы организации памяти, целей, решений и компонентов Core 2.1. Наличие кода и архитектурных схем не доказывает готовность интегрированной системы.
 >
-> **Example:** A graph edge may suggest a connection but should not independently establish a validated fact.
+> **Пример:** связь в графе может указывать на полезный контекст, но сама по себе не подтверждает истинность утверждения.
 >
-> **Scope:** Architectural source material; the historical slogan `Graph = truth` below is not a current ecosystem rule.
+> **Границы:** формула `Graph = truth` ниже — формулировка данного README, а не установленное правило всей экосистемы. Текущие возможности отдельного [Crystal](https://github.com/velantrian/velantrim-exocortex-crystal) нужно проверять в его собственном коде и документации.
 
 ### Exocortex Architecture System
 > Velantrim is a cognitive exocortex system where:
