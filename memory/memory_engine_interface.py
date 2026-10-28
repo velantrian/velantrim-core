@@ -35,10 +35,19 @@ class LegacyMemoryEngine(MemoryEngine):
         self.core = core
 
     def store(self, key: str, value: Any, importance: float = 0.5, tags: Optional[List[str]] = None) -> bool:
-        return self.core.ltm.store(key, value, tags)
+        # Use the Core write boundary so SSB is invalidated after commit.
+        # Legacy LTM does not persist an importance score.
+        self.core.remember(key, value, tags=tags)
+        return True
 
     def recall(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
-        return self.core.ltm.recall(query, limit)
+        # Legacy recall is an exact-key lookup, not semantic search.
+        if limit <= 0:
+            return []
+        record = self.core.recall(query)
+        if record is None:
+            return []
+        return [{"key": query, "value": record["summary"], **record}]
 
     def adapt_behavior(self, params: Dict[str, Any]) -> Dict[str, Any]:
         return {"status": "legacy", "message": "Legacy memory does not support adaptation"}

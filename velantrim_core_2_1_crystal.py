@@ -153,6 +153,11 @@ class SSB:
             return self.short_context[key]
         return None
 
+    def discard(self, key: str) -> None:
+        """Invalidate one cached value without changing task/goal/state."""
+        self.short_context.pop(key, None)
+        self._hits.pop(key, None)
+
     # ── Состояние ──────────────────────────
     def set_state(self, state: str) -> None:
         if state not in self.STATES:
@@ -575,6 +580,8 @@ class VelantrimCore:
                  tags:    list = None) -> None:
         """Сохранить знание в LTM."""
         self.ltm.save(key, summary, type_, tags)
+        # Invalidate only after the durable write succeeds.
+        self.ssb.discard(key)
 
     def recall(self, key: str) -> dict | None:
         """Прочитать знание из LTM."""
@@ -582,7 +589,10 @@ class VelantrimCore:
 
     def forget(self, key: str) -> bool:
         """Удалить знание из LTM осознанно."""
-        return self.ltm.forget(key)
+        removed = self.ltm.forget(key)
+        # Even an already-absent LTM key can still have a cached value.
+        self.ssb.discard(key)
+        return removed
 
     def promote(self, threshold: int = 2) -> list:
         """Перенести горячие ключи из SSB в LTM."""
