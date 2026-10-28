@@ -39,6 +39,7 @@
 """
 
 import sqlite3
+import threading
 import json
 import time
 import os
@@ -153,6 +154,11 @@ class SSB:
             return self.short_context[key]
         return None
 
+    def discard(self, key: str) -> None:
+        """Invalidate one cached value without changing task/goal/state."""
+        self.short_context.pop(key, None)
+        self._hits.pop(key, None)
+
     # ── Состояние ──────────────────────────
     def set_state(self, state: str) -> None:
         if state not in self.STATES:
@@ -246,18 +252,22 @@ class LTM:
             )
         tags_json = json.dumps(tags or [])
         now = time.time()
-        self._conn.execute("""
-            INSERT INTO ltm
-                (key, summary, type, tags, last_access, access_count, created)
-            VALUES (?, ?, ?, ?, ?, 1, ?)
-            ON CONFLICT(key) DO UPDATE SET
-                summary      = excluded.summary,
-                type         = excluded.type,
-                tags         = excluded.tags,
-                last_access  = excluded.last_access,
-                access_count = ltm.access_count + 1
-        """, (key, summary, type_, tags_json, now, now))
-        self._conn.commit()
+        try:
+            self._conn.execute("""
+                INSERT INTO ltm
+                    (key, summary, type, tags, last_access, access_count, created)
+                VALUES (?, ?, ?, ?, ?, 1, ?)
+                ON CONFLICT(key) DO UPDATE SET
+                    summary      = excluded.summary,
+                    type         = excluded.type,
+                    tags         = excluded.tags,
+                    last_access  = excluded.last_access,
+                    access_count = ltm.access_count + 1
+            """, (key, summary, type_, tags_json, now, now))
+            self._conn.commit()
+        except sqlite3.Error:
+            self._conn.rollback()
+            raise
 
     # ── Чтение ──────────────────────────────
     def load(self, key: str) -> dict | None:
@@ -268,11 +278,15 @@ class LTM:
         ).fetchone()
         if row is None:
             return None
-        self._conn.execute(
-            "UPDATE ltm SET last_access = ?, access_count = access_count + 1 "
-            "WHERE key = ?", (time.time(), key)
-        )
-        self._conn.commit()
+        try:
+            self._conn.execute(
+                "UPDATE ltm SET last_access = ?, access_count = access_count + 1 "
+                "WHERE key = ?", (time.time(), key)
+            )
+            self._conn.commit()
+        except sqlite3.Error:
+            self._conn.rollback()
+            raise
         return {
             "summary":      row[0],
             "type":         row[1],
@@ -300,8 +314,12 @@ class LTM:
 
     # ── Удаление ────────────────────────────
     def forget(self, key: str) -> bool:
-        cur = self._conn.execute("DELETE FROM ltm WHERE key = ?", (key,))
-        self._conn.commit()
+        try:
+            cur = self._conn.execute("DELETE FROM ltm WHERE key = ?", (key,))
+            self._conn.commit()
+        except sqlite3.Error:
+            self._conn.rollback()
+            raise
         return cur.rowcount > 0
 
     def forget_stale(self, days: int = 30) -> int:
@@ -558,11 +576,13 @@ class VelantrimCore:
         self.ssb     = SSB()
         self.ltm     = LTM(db_path)
         self.crystal = CrystalGraph()   # опциональный граф
+        self._memory_lock = threading.RLock()  # serialize one Core's API
 
     # ── Главные методы ──────────────────────
     def ask(self, query: str) -> dict:
         """Маршрутизировать запрос через SSB → LTM → Decision."""
-        return router(query, self.ssb, self.ltm)
+        with self._memory_lock:
+            return router(query, self.ssb, self.ltm)
 
     def act(self, action: str) -> dict:
         """Выполнить действие с проверкой Ring Zero."""
@@ -574,19 +594,28 @@ class VelantrimCore:
                  type_:   str  = "fact",
                  tags:    list = None) -> None:
         """Сохранить знание в LTM."""
-        self.ltm.save(key, summary, type_, tags)
+        with self._memory_lock:
+            self.ltm.save(key, summary, type_, tags)
+            # Invalidate only after the durable write succeeds.
+            self.ssb.discard(key)
 
     def recall(self, key: str) -> dict | None:
         """Прочитать знание из LTM."""
-        return self.ltm.load(key)
+        with self._memory_lock:
+            return self.ltm.load(key)
 
     def forget(self, key: str) -> bool:
         """Удалить знание из LTM осознанно."""
-        return self.ltm.forget(key)
+        with self._memory_lock:
+            removed = self.ltm.forget(key)
+            # Even an already-absent LTM key can still have a cached value.
+            self.ssb.discard(key)
+            return removed
 
     def promote(self, threshold: int = 2) -> list:
         """Перенести горячие ключи из SSB в LTM."""
-        return promote_to_ltm(self.ssb, self.ltm, threshold)
+        with self._memory_lock:
+            return promote_to_ltm(self.ssb, self.ltm, threshold)
 
     def recover(self) -> str:
         """Восстановить Поток после сбоя."""
@@ -594,7 +623,8 @@ class VelantrimCore:
 
     def find_by_tag(self, tag: str) -> list:
         """Найти знания по тегу."""
-        return self.ltm.by_tag(tag)
+        with self._memory_lock:
+            return self.ltm.by_tag(tag)
 
     # ── Статус системы ──────────────────────
     def status(self) -> dict:
